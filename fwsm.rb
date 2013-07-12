@@ -17,23 +17,29 @@ class FwsmDumper
 	@@show_context = 'show context'
 	@@changeto_system = 'changeto system'
 
-	@@changeto_context = 'changeto context'
+	@@changeto_context = 'changeto context '
 
 	@@show_run = 'show run'
+
 
 	def initialize(fwsm)
 		@fwsm = fwsm
 		@state = 'init'
 
 		@contexts = nil
+		@context = 'admin'
 	end
 
 
 	def ready(prompt)
 		if @state == 'init'
-			@state = 'derp' 
+			@state = 'show contexts' 
 			@fwsm.cmd(@@changeto_system)
 			@fwsm.cmd(@@show_context)
+		elsif @state == 'dump' and @contexts.size > 0
+			@context = @contexts.shift
+			@fwsm.cmd(@@changeto_context + @context)
+			@fwsm.cmd(@@show_run)
 		end 
 
 	end
@@ -41,8 +47,12 @@ class FwsmDumper
 	def cmd_result(cmd, data)
 		if cmd == @@show_context and not @contexts
 			populate_contexts(data)
+			@state = 'dump'
+		elsif cmd == @@show_run and @state == 'dump'
+			cnf = File.open(@context,'w')
+			cnf << data
+			cnf.close
 		end
-
 	end
 
 
@@ -111,11 +121,9 @@ class Fwsm
 				@dumper = FwsmDumper.new(self)
 			end
 
-			if @last_cmd
-				@dumper.cmd_result(@last_cmd.strip, @buf)
-			else
-				@dumper.ready(data)
-			end
+			
+			@dumper.cmd_result(@last_cmd.strip, @buf) if @last_cmd
+			@dumper.ready(data)
 	
 			unless @cmds.size == 0
 				@buf = ''
