@@ -7,10 +7,7 @@ SSH_USER=ARGV[1]
 SSH_PASS=ARGV[2]
 SSH_HOST=ARGV[0]
 
-#config_file = File.open('fwsm.conf','w')
-#outbuf = ''
-#last_cmd = ''
-
+OUTPUT_DIR='/home/greg/iso/backup/cisco/fwsm'
 
 class FwsmDumper
 
@@ -49,7 +46,7 @@ class FwsmDumper
 			populate_contexts(data)
 			@state = 'dump'
 		elsif cmd == @@show_run and @state == 'dump'
-			cnf = File.open(@context,'w')
+			cnf = File.open(OUTPUT_DIR+'/'+@context,'w')
 			cnf << data
 			cnf.close
 		end
@@ -63,8 +60,6 @@ class FwsmDumper
 			next unless line.start_with? '*',' '
 			@contexts << line[1..line.index(' ',1)-1]
 		end 
-
-		puts @contexts
 	end			
 	
 end
