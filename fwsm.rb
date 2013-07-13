@@ -129,7 +129,7 @@ class Fwsm
 
 				chn.send_data(@last_cmd)
 			else 
-				10.times { chn.send_data("exit\n") unless (!chn.active? || chn.closing?)}
+				10.times { chn.send_data("exit\n") unless (!chn.active? || chn.closing?) }
 			end	
 
 		elsif @state == 'enabled'
