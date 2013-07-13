@@ -122,8 +122,8 @@ class Fwsm
 			end
 
 			
-			@dumper.cmd_result(@last_cmd.strip, @buf) if @last_cmd
-			@dumper.ready(data)
+			@dumper.cmd_result(@last_cmd.strip, @buf.strip) if @last_cmd
+			@dumper.ready(data) if @cmds.size == 0
 	
 			unless @cmds.size == 0
 				@buf = ''
