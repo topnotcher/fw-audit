@@ -47,7 +47,7 @@ class FwsmDumper
 			@state = 'dump'
 		elsif cmd == @@show_run and @state == 'dump'
 			cnf = File.open(OUTPUT_DIR+'/'+@context,'w')
-			cnf << data
+			cnf << data.gsub!("\r","")
 			cnf.close
 		end
 	end
