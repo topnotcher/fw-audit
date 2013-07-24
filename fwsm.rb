@@ -1,13 +1,14 @@
 require 'net/ssh'
 
 
-abort "usage: ruby fwsm.rb host user pass" if ARGV.size < 3
+abort "usage: ruby fwsm.rb host user pass dir" if ARGV.size < 4
 
 SSH_USER=ARGV[1]
 SSH_PASS=ARGV[2]
 SSH_HOST=ARGV[0]
+REPO_DIR=ARGV[3]
 
-OUTPUT_DIR='/home/greg/iso/backup/cisco/fwsm'
+#OUTPUT_DIR='/home/greg/iso/backup/cisco/fwsm'
 
 class FwsmDumper
 
@@ -33,10 +34,16 @@ class FwsmDumper
 			@state = 'show contexts' 
 			@fwsm.cmd(@@changeto_system)
 			@fwsm.cmd(@@show_context)
-		elsif @state == 'dump' and @contexts.size > 0
-			@context = @contexts.shift
-			@fwsm.cmd(@@changeto_context + @context)
-			@fwsm.cmd(@@show_run)
+		elsif @state == 'dump' 
+			if @contexts.size > 0
+				@context = @contexts.shift
+				@fwsm.cmd(@@changeto_context + @context)
+				@fwsm.cmd(@@show_run)
+			else 
+				gitargs = '--git-dir='+REPO_DIR+'/.git' + ' --work-tree='+REPO_DIR
+				`git #{gitargs} commit -m "automatic backup" --author="backup <security@uri.edu>"`
+				`git #{gitargs} push origin master`
+			end
 		end 
 
 	end
@@ -46,9 +53,13 @@ class FwsmDumper
 			populate_contexts(data)
 			@state = 'dump'
 		elsif cmd == @@show_run and @state == 'dump'
-			cnf = File.open(OUTPUT_DIR+'/'+@context,'w')
+			bkfile = REPO_DIR+'/'+@context
+			cnf = File.open(REPO_DIR+'/'+@context,'w')
 			cnf << data.gsub!("\r","")
 			cnf.close
+			
+			gitargs = '--git-dir='+REPO_DIR+'/.git' + ' --work-tree='+REPO_DIR
+			`git #{gitargs} add #{bkfile}`
 		end
 	end
 
