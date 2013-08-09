@@ -41,7 +41,7 @@ class FwsmDumper
 				@fwsm.cmd(@@show_run)
 			else 
 				gitargs = '--git-dir='+REPO_DIR+'/.git' + ' --work-tree='+REPO_DIR
-		 		tags = `git #{gitargs} diff HEAD -G '[A-Z]+\-[0-9]+'`.scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
+		 		tags = `git #{gitargs} diff HEAD -G '[A-Z]+\-[0-9]+' -U0`.scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
 				`git #{gitargs} commit -m "automatic backup #{tags}" --author="backup <security@uri.edu>"`
 				`git #{gitargs} push origin master`
 			end
