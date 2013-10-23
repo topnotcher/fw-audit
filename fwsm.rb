@@ -48,16 +48,19 @@ class FwsmDumper
 			populate_contexts(data)
 			@state = :dump
 		elsif cmd == @@show_run and @state == :dump
-			bkfile = REPO_DIR+'/'+@context
-			cnf = File.open(REPO_DIR+'/'+@context,'w')
-			cnf << data.gsub!("\r","")
-			cnf.close
-			
-			gitargs = '--git-dir='+REPO_DIR+'/.git' + ' --work-tree='+REPO_DIR
-			`git #{gitargs} add #{bkfile}`
+			write_fw_config(data)
 		end
 	end
 
+	def write_fw_config(data)
+		bkfile = REPO_DIR+'/'+@context
+		cnf = File.open(REPO_DIR+'/'+@context,'w')
+		cnf << data.gsub!("\r","")
+		cnf.close
+		
+		gitargs = '--git-dir='+REPO_DIR+'/.git' + ' --work-tree='+REPO_DIR
+		`git #{gitargs} add #{bkfile}`
+	end
 
 	def populate_contexts(data)
 		@contexts = []
