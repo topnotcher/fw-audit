@@ -17,8 +17,14 @@ class FwsmDumper
 
 		@contexts = nil
 		@context = 'admin'
+
+		fwsm_connect
 	end
 
+	def fwsm_connect
+		@fwsm.set_listener self
+		@fwsm.connect	
+	end
 
 	def ready(prompt)
 		if @state == :init
@@ -85,13 +91,11 @@ class Fwsm
 		@pass = pass
 		@user = user
 		@host = host
-
-		connect
 	end
 
 	def connect
 		@cmds = ['terminal pager 0']
-		@ssh = Net::SSH.start(host ,user, {:password => pass, :auth_methods => ['password']})
+		@ssh = Net::SSH.start(@host ,@user, {:password => @pass, :auth_methods => ['password']})
 		@state = :new
 		@ignore_echo_chars = 0
 		@pwtries = 0
@@ -103,7 +107,9 @@ class Fwsm
 				raise 'Failed to open shell channel!' unless success
 				ch.on_data {|chn,data| handle_data(chn,data)}
 			end
-		end  
+		end 
+
+		run
 	end
 
 	def cmd(cmd) 
@@ -114,6 +120,10 @@ class Fwsm
 		@ssh.loop
 	end
 
+	def set_listener listener
+		@listener = listener
+	end
+	
 	def handle_data(chn, data)
 
 		if @state == :new and data =~ @@prompt
@@ -130,12 +140,10 @@ class Fwsm
 		elsif data =~ @@enprompt
 			if @state != :enabled
 				@state = :enabled
-				@dumper = FwsmDumper.new(self,REPO_DIR)
 			end
-
 			
-			@dumper.cmd_result(@last_cmd.strip, @buf.strip) if @last_cmd
-			@dumper.ready(data) if @cmds.size == 0
+			@listener.cmd_result(@last_cmd.strip, @buf.strip) if @last_cmd
+			@listener.ready(data) if @cmds.size == 0
 	
 			unless @cmds.size == 0
 				@buf = ''

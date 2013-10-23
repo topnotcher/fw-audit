@@ -10,5 +10,7 @@ REPO_DIR=ARGV[3]
 #OUTPUT_DIR='/home/greg/iso/backup/cisco/fwsm'
 
 fwsm = Fwsm.new(SSH_HOST,SSH_USER,SSH_PASS)
+dumper = FwsmDumper.new(fwsm,REPO_DIR)
+
 fwsm.run
 
