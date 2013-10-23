@@ -83,6 +83,13 @@ class Fwsm
 
 	def initialize(host,user,pass)
 		@pass = pass
+		@user = user
+		@host = host
+
+		connect
+	end
+
+	def connect
 		@cmds = ['terminal pager 0']
 		@ssh = Net::SSH.start(host ,user, {:password => pass, :auth_methods => ['password']})
 		@state = :new
