@@ -29,14 +29,18 @@ class FwsmDumper
 				@context = @contexts.shift
 				@fwsm.cmd(@@changeto_context + @context)
 				@fwsm.cmd(@@show_run)
-			else 
-				gitargs = '--git-dir='+REPO_DIR+'/.git' + ' --work-tree='+REPO_DIR
-		 		tags = `git #{gitargs} diff HEAD -G '[A-Z]+\-[0-9]+' -U0`.scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
-				`git #{gitargs} commit -m "automatic backup #{tags}" --author="backup <security@uri.edu>"`
-				`git #{gitargs} push origin master`
+			else
+				git_commit	
 			end
 		end 
 
+	end
+
+	def git_commit
+		gitargs = '--git-dir='+REPO_DIR+'/.git' + ' --work-tree='+REPO_DIR
+ 		tags = `git #{gitargs} diff HEAD -G '[A-Z]+\-[0-9]+' -U0`.scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
+		`git #{gitargs} commit -m "automatic backup #{tags}" --author="backup <security@uri.edu>"`
+		`git #{gitargs} push origin master`
 	end
 
 	def cmd_result(cmd, data)
