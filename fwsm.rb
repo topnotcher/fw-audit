@@ -10,7 +10,8 @@ class FwsmDumper
 	@@show_run = 'show run'
 
 
-	def initialize(fwsm)
+	def initialize(fwsm,repo_dir)
+		@repo_dir = repo_dir
 		@fwsm = fwsm
 		@state = :init
 
@@ -37,7 +38,7 @@ class FwsmDumper
 	end
 
 	def git_commit
-		gitargs = '--git-dir='+REPO_DIR+'/.git' + ' --work-tree='+REPO_DIR
+		gitargs = '--git-dir='+@repo_dir+'/.git' + ' --work-tree='+@repo_dir
  		tags = `git #{gitargs} diff HEAD -G '[A-Z]+\-[0-9]+' -U0`.scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
 		`git #{gitargs} commit -m "automatic backup #{tags}" --author="backup <security@uri.edu>"`
 		`git #{gitargs} push origin master`
@@ -53,12 +54,12 @@ class FwsmDumper
 	end
 
 	def write_fw_config(data)
-		bkfile = REPO_DIR+'/'+@context
-		cnf = File.open(REPO_DIR+'/'+@context,'w')
+		bkfile = @repo_dir+'/'+@context
+		cnf = File.open(@repo_dir+'/'+@context,'w')
 		cnf << data.gsub!("\r","")
 		cnf.close
 		
-		gitargs = '--git-dir='+REPO_DIR+'/.git' + ' --work-tree='+REPO_DIR
+		gitargs = '--git-dir='+@repo_dir+'/.git' + ' --work-tree='+@repo_dir
 		`git #{gitargs} add #{bkfile}`
 	end
 
@@ -122,7 +123,7 @@ class Fwsm
 		elsif data =~ @@enprompt
 			if @state != :enabled
 				@state = :enabled
-				@dumper = FwsmDumper.new(self)
+				@dumper = FwsmDumper.new(self,REPO_DIR)
 			end
 
 			
