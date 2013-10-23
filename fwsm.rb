@@ -22,7 +22,7 @@ class FwsmDumper
 
 	def initialize(fwsm)
 		@fwsm = fwsm
-		@state = 'init'
+		@state = :init
 
 		@contexts = nil
 		@context = 'admin'
@@ -30,11 +30,11 @@ class FwsmDumper
 
 
 	def ready(prompt)
-		if @state == 'init'
-			@state = 'show contexts' 
+		if @state == :init
+			@state = :show_contexts
 			@fwsm.cmd(@@changeto_system)
 			@fwsm.cmd(@@show_context)
-		elsif @state == 'dump' 
+		elsif @state == :dump
 			if @contexts.size > 0
 				@context = @contexts.shift
 				@fwsm.cmd(@@changeto_context + @context)
@@ -52,8 +52,8 @@ class FwsmDumper
 	def cmd_result(cmd, data)
 		if cmd == @@show_context and not @contexts
 			populate_contexts(data)
-			@state = 'dump'
-		elsif cmd == @@show_run and @state == 'dump'
+			@state = :dump
+		elsif cmd == @@show_run and @state == :dump
 			bkfile = REPO_DIR+'/'+@context
 			cnf = File.open(REPO_DIR+'/'+@context,'w')
 			cnf << data.gsub!("\r","")
@@ -72,7 +72,7 @@ class FwsmDumper
 			next unless line.start_with? '*',' '
 			@contexts << line[1..line.index(' ',1)-1]
 		end 
-	end			
+	end
 	
 end
 
@@ -87,7 +87,7 @@ class Fwsm
 		@pass = pass
 		@cmds = ['terminal pager 0']
 		@ssh = Net::SSH.start(host ,user, {:password => pass, :auth_methods => ['password']})
-		@state = 'new'
+		@state = :new
 		@ignore_echo_chars = 0
 		@pwtries = 0
 		@buf = ''
@@ -111,11 +111,11 @@ class Fwsm
 
 	def handle_data(chn, data)
 
-		if @state == 'new' and data =~ @@prompt
-			@state = 'normal'
+		if @state == :new and data =~ @@prompt
+			@state = :normal
 			chn.send_data("enable\n")
 
-		elsif @state == 'normal' and data =~ @@pwprompt
+		elsif @state == :normal and data =~ @@pwprompt
 			if (@pwtries += 1) < 4
 				chn.send_data(@pass + "\n")
 			else
@@ -123,8 +123,8 @@ class Fwsm
 			end
 		
 		elsif data =~ @@enprompt
-			if @state != 'enabled'
-				@state = 'enabled'
+			if @state != :enabled
+				@state = :enabled
 				@dumper = FwsmDumper.new(self)
 			end
 
@@ -144,7 +144,7 @@ class Fwsm
 				10.times { chn.send_data("exit\n") unless (!chn.active? || chn.closing?) }
 			end	
 
-		elsif @state == 'enabled'
+		elsif @state == :enabled
 			# filter echoed commands 
 			if data.length == 1 and @ignore_echo_chars > 0
 				@ignore_echo_chars -= 1
