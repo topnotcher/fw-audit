@@ -95,12 +95,13 @@ class Fwsm
 
 	def connect
 		@cmds = ['terminal pager 0']
-		@ssh = Net::SSH.start(@host ,@user, {:password => @pass, :auth_methods => ['password']})
 		@state = :new
 		@ignore_echo_chars = 0
 		@pwtries = 0
 		@buf = ''
 		@last_cmd = nil
+
+		@ssh = Net::SSH.start(@host ,@user, {:password => @pass, :auth_methods => ['password']})
 
 		@ssh.open_channel do |chan|
 			chan.send_channel_request('shell') do |ch,success|
