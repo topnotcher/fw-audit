@@ -57,7 +57,7 @@ class FWSMChangeAggregator
 		return if user == 'failover' or user == 'isobackup'
 		
 		# @TODO configurable
-		return if cmd.start_with?('changeto context')
+		return if cmd.start_with?('changeto context') or cmd.start_with?('perfmon interval') or cmd.start_with?('copy')
 
 		@changes[context] = FWSMChangeSet.new(context,user) if @changes[context].nil?
 
