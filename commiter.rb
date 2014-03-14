@@ -55,13 +55,13 @@ class FWSMChangeAggregator
 		# this is automatic everytime anyone does anything
 		# @TODO configurable
 		return if user == 'failover' or user == 'isobackup'
+		
+		# @TODO configurable
+		return if cmd.start_with?('changeto context')
 
 		@changes[context] = FWSMChangeSet.new(context,user) if @changes[context].nil?
 
-		# @TODO configurable
-		if not cmd.start_with('changeto context')
-			@changes[context] <<  "%s[%s](%s): %s" % [dt,context,user,cmd]
-		end
+		@changes[context] <<  "%s[%s](%s): %s" % [dt,context,user,cmd]
 
 		if cmd == 'write memory'
 			# note: could commit for JUST a write mem. cryptochecksum will change
