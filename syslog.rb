@@ -59,7 +59,11 @@ class FWSMChangePublisher
 		method = 'fwsm_event_' + event
 		@listeners.each do |listener|
 			next unless listener.respond_to? method
-			listener.send method, context, dt, msg
+			begin 
+				listener.send method, context, dt, msg
+			rescue
+				puts $!, $@ #@TODO
+			end
 		end
 	end
 

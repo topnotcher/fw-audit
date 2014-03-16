@@ -1,0 +1,14 @@
+---
+:address: 0.0.0.0
+:port: 50514
+:user_map: 
+  Bob: Bob Barker <bob@foo.bar>
+  john: John <john@foo.bar>
+  :default_suffix: fwsm.foo.bar
+:context_map:
+  admin:
+  - 192.168.1.4
+  - 192.168.1.5
+  context:
+  - 192.168.2.4
+  - 192.168.2.5

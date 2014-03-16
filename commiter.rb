@@ -1,4 +1,5 @@
 require_relative 'fwsm'
+require 'logger'
 
 class FWSMChangeSet
 	attr_reader :context, :user, :msgs
@@ -47,17 +48,16 @@ class FWSMChangeAggregator
 		end
 	end
 
-	def fwsm_event_111008(context, dt, msg)
+	def parse_event(msg)
 		pcs = msg.scan(/^User '([^']+)' executed the '([^']+)' command\.$/)
 		raise 'unable to parse log %s' % [msg] if pcs.length != 1 or pcs[0].length != 2
-		user,cmd = pcs[0]
+		return pcs[0]
+	end
 
-		# this is automatic everytime anyone does anything
-		# @TODO configurable
-		return if user == 'failover' or user == 'isobackup'
-		
-		# @TODO configurable
-		return if cmd.start_with?('changeto context') or cmd.start_with?('perfmon interval') or cmd.start_with?('copy')
+	def fwsm_event_111008(context, dt, msg)
+		user,cmd = parse_event(msg)
+
+		return if ignored_user(user) or ignored_cmd(cmd)
 
 		@changes[context] = FWSMChangeSet.new(context,user) if @changes[context].nil?
 
@@ -67,9 +67,26 @@ class FWSMChangeAggregator
 			# note: could commit for JUST a write mem. cryptochecksum will change
 			commit(context)
 		end
-
 	end
 
+	def ignored_user(user)
+		# @TODO configurable
+		ignored = ['failover', 'isobackup']
+		ignored.each do |ignored_user|
+			return true if user == ignored_user
+		end
+		return false
+	end
+	
+	def ignored_cmd(cmd)
+		# @TODO configurable
+		ignored = ['changeto context', 'perfmon interval', 'copy ']
+		ignored.each do |ignored_cmd|
+			return true if cmd.start_with? ignored_cmd
+		end
+		return false
+	end
+	
 	def commit(context)
 		@manager.commit(@changes[context])
 		@changes[context] = nil
@@ -94,22 +111,22 @@ class FWSMConfigManager
 		@contexts = {}
 		@pending_commits = {}
 
+		@logger = Logger.new(STDOUT)
+
 		thr = Thread.new { start }
-		thr.abort_on_exception = true
 	end
 
 	def start
-	
-		# a bit ugly:
-		# make sure we update everything on start
-		fwsm_connect
-		# they're ALL stale right now
-		check_config_freshness
-		pending = get_pending_commits
-		do_pending_commits(pending) if pending != 0
-		fwsm_exit
+		begin 
+			startup_config_check
+		rescue
+			@logger.fatal $!
+			abort("Aborting due to exception.")
+		end
 
 		while true
+			# Sleep until timeout expires or  until commit()
+			# is called to schedule a pending commit.
 			@mutex.synchronize {
 				@cv.wait(@mutex,@@sleep_time)
 			}
@@ -118,11 +135,25 @@ class FWSMConfigManager
 			pending = get_pending_commits
 
 			next if pending.size == 0
-			
-			fwsm_connect
-			do_pending_commits(pending)
-			fwsm_exit
+			begin	
+				fwsm_connect
+				do_pending_commits(pending)
+				fwsm_exit
+			rescue
+				logging.error $!
+			end
 		end
+	end
+
+	# on startup, we need to connect and populate the list of
+	# contexts at least one time.
+	def startup_config_check
+		fwsm_connect
+		# they are ALL stale right now...
+		check_config_freshness
+		pending = get_pending_commits
+		do_pending_commits(pending) if pending != 0
+		fwsm_exit
 	end
 
 	def get_pending_commits
@@ -158,7 +189,7 @@ class FWSMConfigManager
 		commit = FWSMPendingCommit.new(user, "Autocommit due to timeout (this may be a bug)")
 		@pending_commits[context] = commit
 
-		puts "%s is stale; scheduling backup" % [context]
+		@logger.info "%s is stale; scheduling backup" % [context]
 	end
 
 	def populate_contexts
@@ -168,12 +199,18 @@ class FWSMConfigManager
 	end
 
 	def fwsm_exit
-		@fwsm.exit
+		begin
+			@fwsm.exit
+		rescue
+			@logger.error $!
+		end
 		@fwsm = nil
 	end
 
 	def fwsm_connect
 		@fwsm = FwsmDumper.new(Fwsm.new(@host,@user,@pass))
+
+		# populate everytime in case a new context exists
 		populate_contexts
 	end
 
@@ -188,32 +225,60 @@ class FWSMConfigManager
 		pending = FWSMPendingCommit.new(user, msg)
 
 		@mutex.synchronize {
-			# it's possible there's a scheduled staleness
-			# commit here and we'll actually drop this changeset
-			# and do an autocommit as backup user instead, but hopefully
-			# this is a pretty damn small edge case.
-		
-			@pending_commits[context] = pending unless @pending_commits.has_key? context
+			# If there is another commit pending (small edge case?)
+			# Then we'll combine them, but take the username from this
+			# commit in case the pending one is for staleness
+			# (which should be practically impossible?
+			if @pending_commits.has_key? context
+				pending = merge_commits(pending,@pending_commits[context])
+			end
+
+			@pending_commits[context] = pending
 
 			@cv.signal
 		}
 	end
 
-	def do_pending_commits(pending)
-		pending.each do |context,commit|
-			config = @fwsm.get_context_config(context)
-			write_fw_config(context,config)
-			@contexts[context] = Time.now.to_i
-
-			puts "--------------------------------------------------------"
-			puts commit.message
-
-			git_commit(commit.message, commit.user)
-		end
-		# should not reach this point unless there were pending...
-		git_push
+	def merge_commits(newer,older)
+		msg = newer.message + "\n----------------------------------------------\n"
+		msg += older.message
+		return FWSMPendingCommit.new(newer.user, msg)
 	end
 
+	def do_pending_commits(pending)
+		# this MUST be called AFTER a successful fwsm_connect
+		pending.each do |context,commit|
+			begin 
+				update_context_config(context)
+			rescue
+				@logger.error $!
+				next
+			end
+
+			@logger.debug 'Committing changes...' 
+			@logger.debug commit.message
+
+			begin 
+				git_commit(commit.message, commit.user)
+			rescue
+				@logger.error $!
+			end
+		end
+	
+		begin
+			git_push
+		rescue
+			@logger.warn $!
+		end
+	end
+
+	def update_context_config(context)
+		config = @fwsm.get_context_config(context)
+		write_fw_config(context,config)
+		@contexts[context] = Time.now.to_i
+	end
+
+	# @TODO suppress output from git command
 	def git_commit(msg, author)
 		gitargs = '--git-dir='+@repo_dir+'/.git' + ' --work-tree='+@repo_dir
  		tags = `git #{gitargs} diff HEAD -G '[A-Z]+\-[0-9]+' -U0`.scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
