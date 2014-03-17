@@ -80,7 +80,7 @@ class FWSMChangeAggregator
 	
 	def ignored_cmd(cmd)
 		# @TODO configurable
-		ignored = ['changeto context', 'perfmon interval', 'copy ']
+		ignored = ['changeto ', 'perfmon interval', 'copy ']
 		ignored.each do |ignored_cmd|
 			return true if cmd.start_with? ignored_cmd
 		end
