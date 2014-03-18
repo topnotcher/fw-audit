@@ -96,7 +96,7 @@ end
 FWSMPendingCommit = Struct.new(:user, :message)
 
 class FWSMConfigManager
-	@@config_check_timeout = 3600
+	@@config_check_timeout = 7200
 	@@sleep_time = 30
 
 	def initialize(host, user, pass, user_map, repo_dir)
