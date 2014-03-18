@@ -9,7 +9,11 @@ class FwsmDumper
 
 	
 	def get_context_config(context)
-		@fwsm.cmd 'changeto context %s' % [context]
+		result = @fwsm.cmd 'changeto context %s' % [context]
+
+		# handles contexts that do not exist
+		raise "Failed to change to %s: %s" % [context,result] if result =~ /^ERROR:/
+
 		return @fwsm.cmd 'show run'
 	end
 

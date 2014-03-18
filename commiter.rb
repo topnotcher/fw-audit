@@ -215,9 +215,19 @@ class FWSMConfigManager
 	end
 
 	def commit(changes)
+
 		msg = "Changes to %s by %s\n\n" % [changes.context, changes.user]
 		changes.msgs.each do |cmd|
 			 msg += cmd + "\n"
+		end
+
+		# I'm not sure what caused this, but I did receive some syslogs with invalid
+		# context names at one point, and it caused a new file with a junk config.
+		unless @contexts.has_key? changes.context
+			@logger.error "Attempt to commit to invalid context %s" % [changes.context]
+			@logger.error "If the context has just been created, ignore this error."
+			@logger.error "The following changes are being dropped: " 
+			@logger.error msg
 		end
 
 		context = changes.context
@@ -273,6 +283,10 @@ class FWSMConfigManager
 	end
 
 	def update_context_config(context)
+		# key should always exist by this point via fwsm_connect
+		# but @TODO handle context deletion?
+		# raise "invalid context %s" unless @contexts.has_key? context
+
 		config = @fwsm.get_context_config(context)
 		write_fw_config(context,config)
 		@contexts[context] = Time.now.to_i
