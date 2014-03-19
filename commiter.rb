@@ -307,7 +307,11 @@ class FWSMConfigManager
 	def write_fw_config(context,config)
 		bkfile = @repo_dir+'/'+context
 		cnf = File.open(@repo_dir+'/'+context,'w')
-		cnf << config.gsub!("\r","")
+
+		config.each_line do |line|
+			cnf << line.gsub("\r",'') unless line.start_with? 'Cryptochecksum:'
+		end
+
 		cnf.close
 		
 		gitargs = '--git-dir='+@repo_dir+'/.git' + ' --work-tree='+@repo_dir
