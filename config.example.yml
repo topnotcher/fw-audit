@@ -9,9 +9,9 @@
 :committer:
     :repo: /path/to/repo
     :user_map: 
-    Bob: Bob Barker <bob@foo.bar>
-    john: John <john@foo.bar>
-    :default_suffix: fwsm.foo.bar
+      Bob: Bob Barker <bob@foo.bar>
+      john: John <john@foo.bar>
+      :default_suffix: fwsm.foo.bar
 :context_map:
   admin:
   - 192.168.1.4
