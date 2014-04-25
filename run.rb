@@ -14,8 +14,7 @@ manager = FWSMConfigManager.new(
 	config[:fwsm][:host],
 	config[:fwsm][:user],
 	config[:fwsm][:pass],
-	config[:user_map],
-	config[:repo]
+	config[:committer]
 )
 syslog = FWSMChangePublisher.new(config[:syslog][:address],config[:syslog][:port], config[:context_map])
 syslog.subscribe(FWSMChangeAggregator.new(manager))

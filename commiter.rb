@@ -99,12 +99,12 @@ class FWSMConfigManager
 	@@config_check_timeout = 7200
 	@@sleep_time = 30
 
-	def initialize(host, user, pass, user_map, repo_dir)
+	def initialize(host, user, pass, config)
 		@host = host
 		@user = user
 		@pass = pass
-		@user_map = user_map
-		@repo_dir = repo_dir
+		@config = config
+
 		@mutex = Mutex.new
 		@cv = ConditionVariable.new
 
@@ -177,10 +177,10 @@ class FWSMConfigManager
 	end
 
 	def map_fwsm_user(user)
-		if @user_map.has_key? user
-			return @user_map[user]
+		if @config[:user_map].has_key? user
+			return @config[:user_map][user]
 		else
-			return '%s <%s@%s>' % [user,user,@user_map[:default_suffix]]
+			return '%s <%s@%s>' % [user,user,@config[:user_map][:default_suffix]]
 		end
 	end
 
@@ -294,19 +294,19 @@ class FWSMConfigManager
 
 	# @TODO suppress output from git command
 	def git_commit(msg, author)
-		gitargs = '--git-dir='+@repo_dir+'/.git' + ' --work-tree='+@repo_dir
+		gitargs = '--git-dir='+@config[:repo_dir]+'/.git' + ' --work-tree='+@config[:repo_dir]
  		tags = `git #{gitargs} diff HEAD -G '[A-Z]+\-[0-9]+' -U0`.scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
 		`git #{gitargs} commit -m "#{tags} #{msg}" --author="#{author}"`
 	end
 
 	def git_push
-		gitargs = '--git-dir='+@repo_dir+'/.git' + ' --work-tree='+@repo_dir
+		gitargs = '--git-dir='+@config[:repo_dir]+'/.git' + ' --work-tree='+@config[:repo_dir]
 		`git #{gitargs} push stash testing`
 	end
 
 	def write_fw_config(context,config)
-		bkfile = @repo_dir+'/'+context
-		cnf = File.open(@repo_dir+'/'+context,'w')
+		bkfile = @config[:repo_dir]+'/'+context
+		cnf = File.open(@config[:repo_dir]+'/'+context,'w')
 
 		config.each_line do |line|
 			cnf << line.gsub("\r",'') unless line.start_with? 'Cryptochecksum:'
@@ -314,7 +314,7 @@ class FWSMConfigManager
 
 		cnf.close
 		
-		gitargs = '--git-dir='+@repo_dir+'/.git' + ' --work-tree='+@repo_dir
+		gitargs = '--git-dir='+@config[:repo_dir]+'/.git' + ' --work-tree='+@config[:repo_dir]
 		`git #{gitargs} add #{bkfile}`
 	end
 end
