@@ -291,19 +291,20 @@ class FWSMConfigManager
 		write_fw_config(context,config)
 		@contexts[context] = Time.now.to_i
 	end
-
-	def git_args
-		'--git-dir='+@config[:repo_dir]+'/.git' + ' --work-tree='+@config[:repo_dir]
+	
+	# @TODO suppress output from git command
+	def git(cmd)
+		git_args = '--git-dir='+@config[:repo_dir]+'/.git' + ' --work-tree='+@config[:repo_dir]
+		`git #{git_args} #{cmd}`
 	end
 
-	# @TODO suppress output from git command
 	def git_commit(msg, author)
- 		tags = `git #{git_args} diff HEAD -G '[A-Z]+\-[0-9]+' -U0`.scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
-		`git #{git_args} commit -m "#{tags} #{msg}" --author="#{author}"`
+ 		tags = git("diff HEAD -G '[A-Z]+\-[0-9]+' -U0").scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
+		git "commit -m '#{tags} #{msg}' --author='#{author}'"
 	end
 
 	def git_push
-		`git #{git_args} push stash testing`
+		git "push stash testing"
 	end
 
 	def write_fw_config(context,config)
@@ -316,6 +317,6 @@ class FWSMConfigManager
 
 		cnf.close
 		
-		`git #{git_args} add #{bkfile}`
+		git "add #{bkfile}"
 	end
 end
