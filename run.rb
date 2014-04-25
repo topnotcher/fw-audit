@@ -1,6 +1,6 @@
 require_relative 'fwsm'
 require_relative 'syslog'
-require_relative 'commiter'
+require_relative 'committer'
 require 'yaml'
 
 abort "usage: ruby fwsm.rb config" if ARGV.size < 1
