@@ -9,6 +9,7 @@
 :committer:
     :repo: /path/to/repo
     :push: origin master
+    :tags: true
     :user_map: 
       Bob: Bob Barker <bob@foo.bar>
       john: John <john@foo.bar>

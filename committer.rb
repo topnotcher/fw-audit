@@ -299,8 +299,15 @@ class FWSMConfigManager
 	end
 
 	def git_commit(msg, author)
- 		tags = git("diff HEAD -G '[A-Z]+\-[0-9]+' -U0").scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
-		git "commit -m '#{tags} #{msg}' --author='#{author}'"
+		# this is being used with stash/jira integration. If the diff
+		# contains a jira ticket (i.e. CR-12), the ticket gets referenced in
+		# the commit message, which links the diff to jira and the ticket to stash
+		if @config[:tags]
+			tags = git("diff HEAD -G '[A-Z]+\-[0-9]+' -U0").scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
+			msg = "%s %s" % [tags,msg]
+		end
+
+		git "commit -m '#{msg}' --author='#{author}'"
 	end
 
 	def git_push
