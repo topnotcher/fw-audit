@@ -304,7 +304,9 @@ class FWSMConfigManager
 	end
 
 	def git_push
-		git "push stash testing"
+		if @config[:push]
+			git "push #{@config[:push]}"
+		end
 	end
 
 	def write_fw_config(context,config)
