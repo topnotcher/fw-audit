@@ -7,8 +7,6 @@
   :user: admin
   :pass: admin
 :repo: /path/to/repo
-:address: 0.0.0.0
-:port: 50514
 :user_map: 
   Bob: Bob Barker <bob@foo.bar>
   john: John <john@foo.bar>
