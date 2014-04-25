@@ -292,16 +292,18 @@ class FWSMConfigManager
 		@contexts[context] = Time.now.to_i
 	end
 
+	def git_args
+		'--git-dir='+@config[:repo_dir]+'/.git' + ' --work-tree='+@config[:repo_dir]
+	end
+
 	# @TODO suppress output from git command
 	def git_commit(msg, author)
-		gitargs = '--git-dir='+@config[:repo_dir]+'/.git' + ' --work-tree='+@config[:repo_dir]
- 		tags = `git #{gitargs} diff HEAD -G '[A-Z]+\-[0-9]+' -U0`.scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
-		`git #{gitargs} commit -m "#{tags} #{msg}" --author="#{author}"`
+ 		tags = `git #{git_args} diff HEAD -G '[A-Z]+\-[0-9]+' -U0`.scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
+		`git #{git_args} commit -m "#{tags} #{msg}" --author="#{author}"`
 	end
 
 	def git_push
-		gitargs = '--git-dir='+@config[:repo_dir]+'/.git' + ' --work-tree='+@config[:repo_dir]
-		`git #{gitargs} push stash testing`
+		`git #{git_args} push stash testing`
 	end
 
 	def write_fw_config(context,config)
@@ -314,7 +316,6 @@ class FWSMConfigManager
 
 		cnf.close
 		
-		gitargs = '--git-dir='+@config[:repo_dir]+'/.git' + ' --work-tree='+@config[:repo_dir]
-		`git #{gitargs} add #{bkfile}`
+		`git #{git_args} add #{bkfile}`
 	end
 end
