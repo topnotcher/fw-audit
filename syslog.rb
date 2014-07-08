@@ -43,7 +43,7 @@ class FWSMChangePublisher
 	end
 
 	def parse_log(msg)
-		pcs = msg.scan(/^<[0-9]+>(.{15}) ([0-9\.]+) (?:([A-Za-z0-9\-_]+) )?%FWSM-[0-9]-([0-9]+): (.*)$/)
+		pcs = msg.scan(/^<[0-9]+>(.{15}) ([0-9\.]+) (?:([A-Za-z0-9\-_]+) )?%(FWSM|ASA)-[0-9]-([0-9]+): (.*)$/)
 		raise 'unable to parse log %s' % [msg] if pcs.length != 1 or pcs[0].length != 5 
 
 		data = pcs[0]
