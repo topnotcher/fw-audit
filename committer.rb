@@ -311,8 +311,8 @@ class FWSMConfigManager
 	end
 
 	def git_push
-		if @config[:push]
-			git "push #{@config[:push]}"
+		if @config[:repo][:push]
+			git "push #{@config[:repo][:push]}"
 		end
 	end
 
