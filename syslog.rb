@@ -33,9 +33,12 @@ class FWSMChangePublisher
 
 	def process_log(data)
 		dt,host,context,event,msg = parse_log(data[0])
+	
+		# Always use the mapped context if one has been provided.
+		mapped_context = lookup_context(host)
+		context = mapped_context unless context.nil?
 
 		if context.nil?
-			context = lookup_context(host)
 			raise "Unable to map ip %s to context" % [host] if context.nil?
 		end
 
