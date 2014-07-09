@@ -21,11 +21,16 @@ class FwsmDumper
 		contexts = []
 
 		@fwsm.cmd 'changeto system'
-		data = @fwsm.cmd 'show context'
+		data = @fwsm.cmd 'show context detail'
 
 		data.each_line do |line|
-			next unless line.start_with? '*',' '
-			contexts << line[1..line.index(' ',1)-1]
+			next unless line.start_with? 'Context'
+			pcs = line.strip.split(', ')
+			next if pcs[1] == 'is a system resource'
+
+			pcs = pcs[0].scan(/^Context "([^"]+)"$/)
+			next if pcs[0].size != 1 
+			contexts << pcs[0][0]
 		end 
 
 		return contexts
