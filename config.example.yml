@@ -2,22 +2,48 @@
 :syslog:
   :address: 0.0.0.0
   :port: 50514
-:fwsm:
-  :host: 192.168.1.4
-  :user: admin
-  :pass: admin
-:committer:
-    :repo: /path/to/repo
-    :push: origin master
+  :device_maps:
+    - fwsm
+    - asa
+
+:devices:
+  :fwsm:
+    :host: 192.168.1.4
+    :user: admin
+    :pass: admin
+
+  :asa:
+    :host: 192.168.2.4
+    :user: admin
+    :pass: admin
+
+:user_maps:
+  :fw_admins:
+    Bob: Bob Barker <bob@foo.bar>
+    john: John <john@foo.bar>
+    :default_suffix: fw.foo.bar
+
+:config_managers:
+  :fwsm:
+    :repo:
+      :path: /path/to/repo
+      :push: origin master
     :tags: true
-    :user_map: 
-      Bob: Bob Barker <bob@foo.bar>
-      john: John <john@foo.bar>
-      :default_suffix: fwsm.foo.bar
-:context_map:
-  admin:
-  - 192.168.1.4
-  - 192.168.1.5
-  context:
-  - 192.168.2.4
-  - 192.168.2.5
+    :user_map: :fw_admins 
+
+  :asa:
+    :repo:
+      :path: /path/to/repo
+      :push: origin master
+    :tags: true
+    :user_map: :fw_admins 
+
+:device_maps:
+  fwsm:
+    - 192.168.1.4
+    - 192.168.1.5
+  asa:
+    - 192.168.2.4
+    - 192.168.2.5
+
+# vim: ts=2 sw=2 expandtab

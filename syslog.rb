@@ -1,23 +1,23 @@
 require 'socket'
 require 'time'
 
-class FWSMChangePublisher
+class SyslogListener
 	@@max = 512
 
 	# map = { 'ContextName' => [ip1,ip2] }
-	def initialize(ip,port,map)
+	def initialize(ip,port,aggregators,device_maps)
 		@sock = UDPSocket.new
 		@sock.bind(ip,port)
-		@listeners = []
-		load_map(map)
+		@listeners = aggregators
+		load_map(device_maps)
 	end
-
-	# Takes a context => [ips] map and converts it to ip => context
+	
 	def load_map(map)
 		@map = {}
-		map.each do |context,ips|
-			ips.each {|ip| @map[ip] = context}
+		map.each do |device,ips|
+			ips.each {|ip| @map[ip] = device}
 		end
+		puts @map
 	end
 
 	def run
@@ -33,20 +33,12 @@ class FWSMChangePublisher
 
 	def process_log(data)
 		dt,host,context,event,msg = parse_log(data[0])
-	
-		# Always use the mapped context if one has been provided.
-		mapped_context = lookup_context(host)
-		context = mapped_context unless context.nil?
 
-		if context.nil?
-			raise "Unable to map ip %s to context" % [host] if context.nil?
-		end
-
-		notify(context,dt,event,msg)
+		notify(host,context,dt,event,msg)
 	end
 
 	def parse_log(msg)
-		pcs = msg.scan(/^<[0-9]+>(.{15}) ([0-9\.]+) (?:([A-Za-z0-9\-_]+) )?%(FWSM|ASA)-[0-9]-([0-9]+): (.*)$/)
+		pcs = msg.scan(/^<[0-9]+>(.{15}) ([0-9\.]+) (?:([A-Za-z0-9\-_]+) )?%(?:FWSM|ASA)-[0-9]-([0-9]+): (.*)$/)
 		raise 'unable to parse log %s' % [msg] if pcs.length != 1 or pcs[0].length != 5 
 
 		data = pcs[0]
@@ -56,23 +48,22 @@ class FWSMChangePublisher
 	end
 
 	# name of context if ip in map, else nil
-	def lookup_context(ip)
+	def lookup_device(ip)
 		@map[ip]
 	end
 
-	def notify(context,dt,event,msg)
+	def notify(host,context,dt,event,msg)
 		method = 'fwsm_event_' + event
-		@listeners.each do |listener|
-			next unless listener.respond_to? method
-			begin 
-				listener.send method, context, dt, msg
-			rescue
-				puts $!, $@ #@TODO
-			end
+		device = lookup_device(host)
+		raise "Unable to map IP %s to device" % [host] if device.nil?
+		listener = @listeners[device]	
+
+		return unless listener.respond_to? method
+		begin 
+			listener.send method, context, dt, msg
+		rescue
+			puts $!, $@ #@TODO
 		end
 	end
 
-	def subscribe(me)
-		@listeners << me
-	end
 end

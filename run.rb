@@ -7,17 +7,24 @@ abort "usage: ruby fwsm.rb config" if ARGV.size < 1
 
 CONFIG=ARGV[0]
 
+
+
 puts "config: '%s'" % [CONFIG]
 config = YAML::load(File.open(CONFIG))
+managers = {}
+aggregators = {}
 
-manager = FWSMConfigManager.new(
-	config[:fwsm][:host],
-	config[:fwsm][:user],
-	config[:fwsm][:pass],
-	config[:committer]
-)
-syslog = FWSMChangePublisher.new(config[:syslog][:address],config[:syslog][:port], config[:context_map])
-syslog.subscribe(FWSMChangeAggregator.new(manager))
+config[:config_managers].each do |device_name,options|
+	options[:user_map] = config[:user_maps][options[:user_map]] if options[:user_map] 
+	managers[device_name] = FWSMConfigManager.new(
+		config[:devices][device_name][:host],
+		config[:devices][device_name][:user],
+		config[:devices][device_name][:pass],
+		options
+	)
+	aggregators[device_name] = FWSMChangeAggregator.new(managers[device_name])
+end
 
+syslog = SyslogListener.new(config[:syslog][:address],config[:syslog][:port], aggregators, config[:device_maps])
 
 syslog.run

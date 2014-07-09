@@ -294,7 +294,7 @@ class FWSMConfigManager
 	
 	# @TODO suppress output from git command
 	def git(cmd)
-		git_args = '--git-dir='+@config[:repo]+'/.git' + ' --work-tree='+@config[:repo]
+		git_args = '--git-dir='+@config[:repo][:path]+'/.git' + ' --work-tree='+@config[:repo][:path]
 		`git #{git_args} #{cmd}`
 	end
 
@@ -317,8 +317,8 @@ class FWSMConfigManager
 	end
 
 	def write_fw_config(context,config)
-		bkfile = @config[:repo]+'/'+context
-		cnf = File.open(@config[:repo]+'/'+context,'w')
+		bkfile = @config[:repo][:path]+'/'+context
+		cnf = File.open(@config[:repo][:path]+'/'+context,'w')
 
 		config.each_line do |line|
 			cnf << line.gsub("\r",'') unless line.start_with? 'Cryptochecksum:'
