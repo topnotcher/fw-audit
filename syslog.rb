@@ -17,7 +17,6 @@ class SyslogListener
 		map.each do |device,ips|
 			ips.each {|ip| @map[ip] = device}
 		end
-		puts @map
 	end
 
 	def run
