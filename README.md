@@ -1,4 +1,4 @@
-A small ruby program to manage Cisco FWSM context configurations in a git repository.
+A small ruby program to manage Cisco FWSM or ASA context configurations in a git repository.
 
 Rather than simply grab the configurations periodically and commit them to git, this program attempts to group the changes into logical commits with an actual author. An example commit log looks like:
 
@@ -17,4 +17,4 @@ Date:   Thu Apr 24 08:49:47 2014 -0400
     2014-04-24 08:49:46 -0400[contexta](greg): write memory
 ```
 
-This is accomplished by listening for configuration changes via syslog. Changes are saved in per-context buffers until a 30 second timeout expires or a "write memory" command is received. At this point, the program logs into the firewall, downloads the new configuration, and commits the result with the captured command in the commit message and the username from the syslogs as the author. 
+This is accomplished by listening for configuration changes via syslog. Changes are saved in per-context buffers until a 30 second timeout expires or a "write memory" command is received. At this point, the program logs into the firewall, downloads the new configuration, and commits the result with the captured command in the commit message and the username from the syslogs as the author. This is being used at the University of Rhode Island to monitor several ASA and FWSMs.
