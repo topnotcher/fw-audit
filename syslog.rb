@@ -31,19 +31,18 @@ class SyslogListener
 	end
 
 	def process_log(data)
-		dt,host,context,event,msg = parse_log(data[0])
-
-		notify(host,context,dt,event,msg)
+		dt,host,log = parse_log(data[0])
+		notify(host,dt,log)
 	end
 
 	def parse_log(msg)
-		pcs = msg.scan(/^<[0-9]+>(.{15}) ([0-9\.]+) (?:([A-Za-z0-9\-_]+) )?%(?:FWSM|ASA)-[0-9]-([0-9]+): (.*)$/)
-		raise 'unable to parse log %s' % [msg] if pcs.length != 1 or pcs[0].length != 5 
+		pcs = msg.scan(/^<[0-9]+>(.{15}) ([0-9\.]+) (.*)$/)
+		raise 'unable to parse log %s' % [msg] if pcs.length != 1 or pcs[0].length != 3 
 
 		data = pcs[0]
 
-		# dt, host, context, event, msg
-		return Time.parse(data[0]),data[1],data[2],data[3],data[4]
+		# dt, host, log
+		return Time.parse(data[0]),data[1],data[2]
 	end
 
 	# name of context if ip in map, else nil
@@ -51,15 +50,15 @@ class SyslogListener
 		@map[ip]
 	end
 
-	def notify(host,context,dt,event,msg)
-		method = 'fwsm_event_' + event
+	def notify(host,dt,msg)
 		device = lookup_device(host)
 		raise "Unable to map IP %s to device" % [host] if device.nil?
 		listener = @listeners[device]	
 
-		return unless listener.respond_to? method
+		raise "Device %s has nil listener" % [host] if listener.nil?
+	
 		begin 
-			listener.send method, context, dt, msg
+			listener.syslog_event(host,dt,msg)
 		rescue
 			puts $!, $@ #@TODO
 		end

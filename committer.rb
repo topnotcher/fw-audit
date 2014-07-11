@@ -1,7 +1,7 @@
-require_relative 'fwsm'
+require_relative 'cisco'
 require 'logger'
 
-class FWSMChangeSet
+class CiscoFWChangeSet
 	attr_reader :context, :user, :msgs
 
 	def initialize(context,user)
@@ -21,7 +21,7 @@ class FWSMChangeSet
 	end
 end
 
-class FWSMChangeAggregator
+class CiscoFWChangeAggregator
 	# commit automatically after 30 seconds with no additional changes
 	# and no write memory
 	@@commit_timeout = 30
@@ -48,18 +48,25 @@ class FWSMChangeAggregator
 		end
 	end
 
-	def parse_event(msg)
+	def parse_event_111008(msg)
 		pcs = msg.scan(/^User '([^']+)' executed the '([^']+)' command\.$/)
 		raise 'unable to parse log %s' % [msg] if pcs.length != 1 or pcs[0].length != 2
 		return pcs[0]
 	end
 
-	def fwsm_event_111008(context, dt, msg)
-		user,cmd = parse_event(msg)
+	def syslog_event(host, dt, log)
+		pcs = log.scan /^([A-Za-z0-9\-_]+) %(?:FWSM|ASA)-[0-9]-([0-9]+): (.*)$/
+
+		# only listen for event 111008
+		return if pcs.size != 1 or pcs[0][1] != '111008'
+
+		context = pcs[0][0]
+
+		user,cmd = parse_event_111008(pcs[0][2])
 
 		return if ignored_user(user) or ignored_cmd(cmd)
 
-		@changes[context] = FWSMChangeSet.new(context,user) if @changes[context].nil?
+		@changes[context] = CiscoFWChangeSet.new(context,user) if @changes[context].nil?
 
 		@changes[context] <<  "%s[%s](%s): %s" % [dt,context,user,cmd]
 
@@ -93,9 +100,9 @@ class FWSMChangeAggregator
 	end
 end
 
-FWSMPendingCommit = Struct.new(:user, :message)
+CiscoFWPendingCommit = Struct.new(:user, :message)
 
-class FWSMConfigManager
+class CiscoFWConfigManager
 	@@config_check_timeout = 7200
 	@@sleep_time = 30
 
@@ -136,9 +143,9 @@ class FWSMConfigManager
 
 			next if pending.size == 0
 			begin	
-				fwsm_connect
+				fw_connect
 				do_pending_commits(pending)
-				fwsm_exit
+				fw_exit
 			rescue
 				logging.error $!
 			end
@@ -148,12 +155,12 @@ class FWSMConfigManager
 	# on startup, we need to connect and populate the list of
 	# contexts at least one time.
 	def startup_config_check
-		fwsm_connect
+		fw_connect
 		# they are ALL stale right now...
 		check_config_freshness
 		pending = get_pending_commits
 		do_pending_commits(pending) if pending != 0
-		fwsm_exit
+		fw_exit
 	end
 
 	def get_pending_commits
@@ -176,7 +183,7 @@ class FWSMConfigManager
 		end
 	end
 
-	def map_fwsm_user(user)
+	def map_fw_user(user)
 		if @config[:user_map].has_key? user
 			return @config[:user_map][user]
 		else
@@ -185,30 +192,30 @@ class FWSMConfigManager
 	end
 
 	def schedule_stale_commit(context)
-		user = map_fwsm_user('backup')	
-		commit = FWSMPendingCommit.new(user, "Autocommit due to timeout (this may be a bug)")
+		user = map_fw_user('backup')	
+		commit = CiscoFWPendingCommit.new(user, "Autocommit due to timeout (this may be a bug)")
 		@pending_commits[context] = commit
 
 		@logger.info "%s is stale; scheduling backup" % [context]
 	end
 
 	def populate_contexts
-		@fwsm.get_contexts.each do |context|
+		@fw.get_contexts.each do |context|
 			@contexts[context] = 0 unless @contexts.has_key? context
 		end
 	end
 
-	def fwsm_exit
+	def fw_exit
 		begin
-			@fwsm.exit
+			@fw.exit
 		rescue
 			@logger.error $!
 		end
-		@fwsm = nil
+		@fw = nil
 	end
 
-	def fwsm_connect
-		@fwsm = FwsmDumper.new(Fwsm.new(@host,@user,@pass))
+	def fw_connect
+		@fw = CiscoFWDumper.new(CiscoFW.new(@host,@user,@pass))
 
 		# populate everytime in case a new context exists
 		populate_contexts
@@ -231,8 +238,8 @@ class FWSMConfigManager
 		end
 
 		context = changes.context
-		user = map_fwsm_user(changes.user)
-		pending = FWSMPendingCommit.new(user, msg)
+		user = map_fw_user(changes.user)
+		pending = CiscoFWPendingCommit.new(user, msg)
 
 		@mutex.synchronize {
 			# If there is another commit pending (small edge case?)
@@ -252,11 +259,11 @@ class FWSMConfigManager
 	def merge_commits(newer,older)
 		msg = newer.message + "\n----------------------------------------------\n"
 		msg += older.message
-		return FWSMPendingCommit.new(newer.user, msg)
+		return CiscoFWPendingCommit.new(newer.user, msg)
 	end
 
 	def do_pending_commits(pending)
-		# this MUST be called AFTER a successful fwsm_connect
+		# this MUST be called AFTER a successful fw_connect
 		pending.each do |context,commit|
 			begin 
 				update_context_config(context)
@@ -283,11 +290,11 @@ class FWSMConfigManager
 	end
 
 	def update_context_config(context)
-		# key should always exist by this point via fwsm_connect
+		# key should always exist by this point via fw_connect
 		# but @TODO handle context deletion?
 		# raise "invalid context %s" unless @contexts.has_key? context
 
-		config = @fwsm.get_context_config(context)
+		config = @fw.get_context_config(context)
 		write_fw_config(context,config)
 		@contexts[context] = Time.now.to_i
 	end

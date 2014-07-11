@@ -1,27 +1,38 @@
 require 'net/ssh'
 
-class FwsmDumper
+class CiscoFWDumper
 
-	def initialize(fwsm)
-		@fwsm = fwsm
-		@fwsm.connect
+	def initialize(fw)
+		@fw = fw
+		@fw.connect
 	end
 
 	
 	def get_context_config(context)
-		result = @fwsm.cmd 'changeto context %s' % [context]
+		change_context(context) if get_mode == :multiple
+		@fw.cmd 'show run'
+	end
 
-		# handles contexts that do not exist
-		raise "Failed to change to %s: %s" % [context,result] if result =~ /^ERROR:/
+	def change_context(context)
+		#(1..3).each do 
+			result = @fw.cmd 'changeto context %s' % [context]
 
-		return @fwsm.cmd 'show run'
+			# handles contexts that do not exist
+			raise "Failed to change to %s: %s" % [context,result] if result =~ /^ERROR:/
+
+			#return if get_context == context
+		#end
+
+		#raise 'Three attempts to changeto context "%s" failed.' % [context] 
 	end
 
 	def get_contexts
 		contexts = []
 
-		@fwsm.cmd 'changeto system'
-		data = @fwsm.cmd 'show context detail'
+		return [get_hostname] if get_mode == :single
+
+		@fw.cmd 'changeto system'
+		data = @fw.cmd 'show context detail'
 
 		data.each_line do |line|
 			next unless line.start_with? 'Context'
@@ -36,12 +47,25 @@ class FwsmDumper
 		return contexts
 	end
 
+	def get_mode
+		data = @fw.cmd 'show mode'
+		data.each_line do |line|
+			pcs = line.scan(/Security context mode: (single|multiple)/)
+			return pcs[0][0].to_sym if pcs.size == 1
+		end
+		return :unknown
+	end
+
+	def get_hostname
+		return @fw.cmd('show hostname').strip 
+	end
+
 	def exit
-		@fwsm.cmd 'exit'
+		@fw.cmd 'exit'
 	end
 end
 
-class Fwsm
+class CiscoFW
 
 	@@prompt = /> $/
 	@@enprompt = /# $/
