@@ -87,7 +87,7 @@ class CiscoFWChangeAggregator
 	
 	def ignored_cmd(cmd)
 		# @TODO configurable
-		ignored = ['changeto ', 'perfmon interval', 'copy ', 'show ', 'ping ', 'enable']
+		ignored = ['changeto ', 'perfmon interval', 'copy ', 'show ', 'ping ', 'enable', 'configure ']
 		ignored.each do |ignored_cmd|
 			return true if cmd.start_with? ignored_cmd
 		end
