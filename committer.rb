@@ -310,8 +310,10 @@ class CiscoFWConfigManager
 		# contains a jira ticket (i.e. CR-12), the ticket gets referenced in
 		# the commit message, which links the diff to jira and the ticket to stash
 		if @config[:tags]
-			tags = git("diff HEAD -G '[A-Z]+\-[0-9]+' -U0").scan(/[A-Z]+\-[0-9]+/).uniq.join(', ')
-			msg = "%s %s" % [tags,msg]
+			@config[:tags].each do |tag|
+				tags = git("diff HEAD -G '#{tag}' -U0").scan(/#{tag}/).uniq.join(', ')
+				msg = "%s %s" % [tags,msg]
+			end
 		end
 
 		git "commit -m '#{msg}' --author='#{author}'"

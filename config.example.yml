@@ -28,21 +28,23 @@
     :repo:
       :path: /path/to/repo
       :push: origin master
-    :tags: true
+    :tags:
+      - CR\-[0-9]+
     :user_map: :fw_admins 
 
   :asa:
     :repo:
       :path: /path/to/repo
       :push: origin master
-    :tags: true
+    :tags:
+      - CR\-[0-9]+
     :user_map: :fw_admins 
 
 :device_maps:
-  fwsm:
+  :fwsm:
     - 192.168.1.4
     - 192.168.1.5
-  asa:
+  :asa:
     - 192.168.2.4
     - 192.168.2.5
 
