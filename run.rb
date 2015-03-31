@@ -8,8 +8,14 @@ CONFIG=ARGV[0]
 
 
 
+
 puts "config: '%s'" % [CONFIG]
 config = YAML::load(File.open(CONFIG))
+
+if config[:pidfile]
+	File.open(config[:pidfile], 'w') {|pidfile| pidfile.write(Process.pid)}
+end
+
 managers = {}
 aggregators = {}
 
