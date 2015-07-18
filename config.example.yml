@@ -1,14 +1,20 @@
 ---
+# These are required for daemonizing
 :pidfile: /foo/bar
 :logfile: /foo/bar/firewalls.log
+
+
 :syslog:
   :address: 0.0.0.0
   :port: 50514
+
+  # see device_maps below
   :device_maps:
     - fwsm
     - asa
 
 :devices:
+  # Login information for a device
   :fwsm:
     :host: 192.168.1.4
     :user: admin
@@ -42,7 +48,11 @@
       - CR\-[0-9]+
     :user_map: :fw_admins 
 
+# Multiple devices may be logging to the same instance of the backup program.
+# Device maps map syslog messages to devices by matching the IP addresses.
 :device_maps:
+
+  # logs from 192.168.1.4-5 will be mapped to the device named "fwsm"
   :fwsm:
     - 192.168.1.4
     - 192.168.1.5
