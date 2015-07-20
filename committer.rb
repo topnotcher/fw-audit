@@ -118,9 +118,17 @@ class CiscoFWConfigManager
 		@contexts = {}
 		@pending_commits = {}
 
-		@logger = Logger.new(STDOUT)
+		if config[:logger]
+			set_logger(config[:logger])
+		else
+			@logger = Logger.new(STDOUT)
+		end
 
 		thr = Thread.new { start }
+	end
+
+	def set_logger(logger)
+		@logger = logger
 	end
 
 	def start
