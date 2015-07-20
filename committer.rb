@@ -22,9 +22,9 @@ class CiscoFWChangeSet
 end
 
 class CiscoFWChangeAggregator
-	# commit automatically after 30 seconds with no additional changes
-	# and no write memory
-	@@commit_timeout = 30
+	# commit automatically after @@commit_timeout seconds with no additional
+	# changes and no write memory
+	@@commit_timeout = 120
 
 	def initialize(manager)
 		@manager = manager	
